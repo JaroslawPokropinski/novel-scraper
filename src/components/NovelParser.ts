@@ -3,19 +3,20 @@ import { load, SelectorType } from "cheerio";
 import CheerioUtils from "./CheerioUtils";
 import VolumeParser from "./VolumeParser";
 
-type NovelParserSelectors = {
-  name: string;
+export type NovelParserSelectors = {
   contentSelector: SelectorType;
   volumeTitleSelector: SelectorType;
   chapterSelector: SelectorType;
   chapterBodySelector: SelectorType;
-  chapterTitleSelector: SelectorType | undefined;
+  chapterTitleSelector?: SelectorType;
+  adSelectors?: SelectorType[];
 };
 
 export default class NovelParser {
   constructor(
+    private title: string,
     private startUrl: string,
-    private options: NovelParserSelectors
+    private selectors: NovelParserSelectors
   ) {}
 
   async parse() {
@@ -24,21 +25,19 @@ export default class NovelParser {
 
     const sections = CheerioUtils.splitBySelector(
       $,
-      this.options.contentSelector,
-      this.options.volumeTitleSelector
+      this.selectors.contentSelector,
+      this.selectors.volumeTitleSelector
     );
 
     sections.forEach((section, volumeIdx) => {
       const volumeParser = new VolumeParser(
         $,
         section,
-        $(section).find(this.options.volumeTitleSelector).text(),
+        $(section).find(this.selectors.volumeTitleSelector).text(),
         volumeIdx,
         $(section).find("img").first().attr()?.["src"],
-        {
-          ...this.options,
-          novelOutput: `output/${this.options.name}`,
-        }
+        `output/${this.title}`,
+        this.selectors
       );
 
       volumeParser.parse();

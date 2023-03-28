@@ -2,33 +2,31 @@ import { Cheerio, CheerioAPI, Element, SelectorType } from "cheerio";
 import ChapterParser from "./ChapterParser";
 import fs from "fs";
 import Utils from "./Utils";
-
-type VolumeParserSelectors = {
-  chapterSelector: SelectorType;
-  chapterBodySelector: SelectorType;
-  chapterTitleSelector: SelectorType | undefined;
-  novelOutput: string;
-};
+import { NovelParserSelectors } from "./NovelParser";
 
 export default class VolumeParser {
+  private volumeOutput: string;
+
   constructor(
     private $: CheerioAPI,
     private section: Cheerio<Element>,
-    private name: string,
+    private title: string,
     private volumeNumber: number,
     private coverUrl: string | undefined,
-
-    private selectors: VolumeParserSelectors
-  ) {}
+    private novelOutput: string,
+    private selectors: NovelParserSelectors
+  ) {
+    this.volumeOutput = `${this.novelOutput}/${this.title}`;
+  }
 
   async parse() {
     if (this.coverUrl) {
-      fs.mkdirSync(`${this.selectors.novelOutput}/${this.name}`, {
+      fs.mkdirSync(`${this.volumeOutput}`, {
         recursive: true,
       });
       await Utils.downloadImage(
         this.coverUrl,
-        `${this.selectors.novelOutput}/${this.name}/cover.jpg`
+        `${this.volumeOutput}/cover.jpg`
       );
     }
 
@@ -39,18 +37,21 @@ export default class VolumeParser {
 
     const htmls = await Promise.allSettled(
       urls.map((url, idx) =>
-        new ChapterParser(this.volumeNumber, idx, url, {
-          ...this.selectors,
-          chapterCacheLocation: `${this.selectors.novelOutput}/.chapter-cache`,
-          volumeOutput: `${this.selectors.novelOutput}/${this.name}`,
-        }).parse()
+        new ChapterParser(
+          this.volumeNumber,
+          idx,
+          url,
+          this.volumeOutput,
+          `${this.novelOutput}/.chapter-cache`,
+          this.selectors
+        ).parse()
       )
     );
 
     // Save the result
-    fs.mkdirSync(this.selectors.novelOutput, { recursive: true });
+    fs.mkdirSync(this.novelOutput, { recursive: true });
     await fs.promises.writeFile(
-      `${this.selectors.novelOutput}/${this.name}/content.html`,
+      `${this.volumeOutput}/content.html`,
       htmls
         .map((html) => (html.status === "fulfilled" ? html.value : null))
         .filter((value): value is string => value !== null)

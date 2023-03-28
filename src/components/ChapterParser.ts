@@ -1,27 +1,23 @@
 import axios from "axios";
 import { CheerioAPI, load, SelectorType } from "cheerio";
 import fs from "fs";
+import { NovelParserSelectors } from "./NovelParser";
 import Utils from "./Utils";
-
-type ChapterParserOptions = {
-  chapterBodySelector: SelectorType;
-  chapterTitleSelector: SelectorType | undefined;
-  chapterCacheLocation: string;
-  volumeOutput: string;
-};
 
 export default class ChapterParser {
   constructor(
     private volumeNumber: number,
     private chapterNumber: number,
     private url: string,
-    private options: ChapterParserOptions
+    private volumeOutput: string,
+    private chapterCacheLocation: string,
+    private selectors: NovelParserSelectors
   ) {}
 
   async loadFromCache() {
     try {
       return await fs.promises.readFile(
-        `${this.options.chapterCacheLocation}/volume_${this.volumeNumber}_chapter_${this.chapterNumber}.html`,
+        `${this.chapterCacheLocation}/volume_${this.volumeNumber}_chapter_${this.chapterNumber}.html`,
         "utf8"
       );
     } catch {
@@ -30,18 +26,18 @@ export default class ChapterParser {
   }
 
   async saveToCache(html: string) {
-    fs.mkdirSync(this.options.chapterCacheLocation, { recursive: true });
+    fs.mkdirSync(this.chapterCacheLocation, { recursive: true });
     await fs.promises.writeFile(
-      `${this.options.chapterCacheLocation}/volume_${this.volumeNumber}_chapter_${this.chapterNumber}.html`,
+      `${this.chapterCacheLocation}/volume_${this.volumeNumber}_chapter_${this.chapterNumber}.html`,
       html,
       "utf8"
     );
   }
 
   parseTitle($: CheerioAPI) {
-    if (!this.options.chapterTitleSelector) return "";
+    if (!this.selectors.chapterTitleSelector) return "";
 
-    return `<h1>${$(this.options.chapterTitleSelector).first().text()}</h1>`;
+    return `<h1>${$(this.selectors.chapterTitleSelector).first().text()}</h1>`;
   }
 
   async fetchImage(url: string, path: string) {
@@ -51,17 +47,20 @@ export default class ChapterParser {
   }
 
   async parseContent($: CheerioAPI) {
+    // TODO: remove scripts
+    // TODO: remove links
     // clean ads
     $("#jp-post-flair").remove();
+    this.selectors.adSelectors?.forEach((adSelector) => $(adSelector).remove());
 
     // promise array to fetch images
     const imageFetchPromises = new Array<Promise<unknown>>();
     // make sure the image folder is created
-    fs.mkdirSync(`${this.options.volumeOutput}/images`, {
+    fs.mkdirSync(`${this.volumeOutput}/images`, {
       recursive: true,
     });
 
-    $(this.options.chapterBodySelector)
+    $(this.selectors.chapterBodySelector)
       .find("img")
       .each((_, image) => {
         const attrs = $(image).attr();
@@ -80,10 +79,7 @@ export default class ChapterParser {
           if (name) {
             const savePath = `images/${name}`;
             imageFetchPromises.push(
-              Utils.downloadImage(
-                attrs.src,
-                `${this.options.volumeOutput}/${savePath}`
-              )
+              Utils.downloadImage(attrs.src, `${this.volumeOutput}/${savePath}`)
             );
 
             attrs.src = savePath;
@@ -103,7 +99,7 @@ export default class ChapterParser {
       });
     await Promise.allSettled(imageFetchPromises);
 
-    return $(this.options.chapterBodySelector);
+    return $(this.selectors.chapterBodySelector);
   }
 
   async parse() {
