@@ -4,12 +4,12 @@ import CheerioUtils from "./CheerioUtils";
 import VolumeParser from "./VolumeParser";
 
 export type NovelParserSelectors = {
-  contentSelector: SelectorType;
-  volumeTitleSelector: SelectorType;
-  chapterSelector: SelectorType;
-  chapterBodySelector: SelectorType;
-  chapterTitleSelector?: SelectorType;
-  adSelectors?: SelectorType[];
+  contentSelector: string;
+  volumeTitleSelector: string;
+  chapterSelector: string;
+  chapterBodySelector: string;
+  chapterTitleSelector?: string;
+  adSelectors?: string[];
 };
 
 export default class NovelParser {
@@ -33,7 +33,9 @@ export default class NovelParser {
       const volumeParser = new VolumeParser(
         $,
         section,
-        $(section).find(this.selectors.volumeTitleSelector).text(),
+        `${this.title} ${$(section)
+          .find(this.selectors.volumeTitleSelector)
+          .text()}`,
         volumeIdx,
         $(section).find("img").first().attr()?.["src"],
         `output/${this.title}`,

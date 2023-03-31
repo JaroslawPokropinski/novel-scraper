@@ -51,7 +51,7 @@ export default class VolumeParser {
     // Save the result
     fs.mkdirSync(this.novelOutput, { recursive: true });
     await fs.promises.writeFile(
-      `${this.volumeOutput}/content.html`,
+      `${this.volumeOutput}/${this.title}.html`,
       htmls
         .map((html) => (html.status === "fulfilled" ? html.value : null))
         .filter((value): value is string => value !== null)

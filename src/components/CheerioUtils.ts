@@ -4,13 +4,17 @@ import { ChildNode } from "domhandler";
 export default class CheerioUtils {
   static splitBySelector(
     $: CheerioAPI,
-    mainSelector: SelectorType,
+    mainSelector: string,
     splitSelector: string
   ) {
     let currentSection: ChildNode[] = [];
     const sections: ChildNode[][] = [];
 
-    $(mainSelector)[0].childNodes.forEach((node) => {
+    const mainNode = $(mainSelector)[0];
+    if (mainNode.type !== "tag")
+      throw new Error("Main selector does not resolve to a tag");
+
+    mainNode.childNodes.forEach((node) => {
       if ($(node).is(splitSelector)) {
         currentSection = [];
         sections.push(currentSection);

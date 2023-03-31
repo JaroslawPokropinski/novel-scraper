@@ -49,6 +49,7 @@ export default class ChapterParser {
   async parseContent($: CheerioAPI) {
     // TODO: remove scripts
     // TODO: remove links
+    // $("a").each((_, element) => );
     // clean ads
     $("#jp-post-flair").remove();
     this.selectors.adSelectors?.forEach((adSelector) => $(adSelector).remove());
